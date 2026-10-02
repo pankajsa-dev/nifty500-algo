@@ -99,7 +99,8 @@ def upstox_daily(instrument_key: str, start: date, end: date) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.concat(frames)
     df["date"] = pd.to_datetime(df["ts"].str[:10])
-    return df.set_index("date").sort_index()[["open", "high", "low", "close", "volume"]].astype(float)
+    df = df.set_index("date").sort_index()[["open", "high", "low", "close", "volume"]].astype(float)
+    return df[~df.index.duplicated(keep="last")]
 
 
 def yahoo_daily(ticker: str, start: date, end: date) -> pd.DataFrame:
@@ -178,6 +179,7 @@ def load_panel(source: str = "upstox"):
 
     d = DATA_DIR / "prices" / source
     frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet")) if not p.stem.startswith("_") or p.stem == "_INDEX"}
+    frames = {s: df[~df.index.duplicated(keep="last")].sort_index() for s, df in frames.items()}
     index = frames.pop("_INDEX", None)
     fields = {f: pd.DataFrame({s: df[f] for s, df in frames.items()}).sort_index()
               for f in ("open", "high", "low", "close", "volume")}

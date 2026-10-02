@@ -1,0 +1,37 @@
+name: Download all NSE stocks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Download every NSE equity from Upstox
+        timeout-minutes: 150
+        continue-on-error: true
+        run: |
+          python -c "
+          from pathlib import Path
+          from algo.data import download_all
+          download_all(source='upstox_all', sleep=0.05, out_dir=Path('/tmp/all'))
+          " 2>&1 | tee data/_log_upstox_all.txt
+      - name: Keep only stocks that were ever among the 700 most traded
+        run: python scripts/prune_universe.py /tmp/all data/prices/upstox_all --top 700 2>&1 | tee -a data/_log_upstox_all.txt
+      - name: Commit data
+        if: always()
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "Add point-in-time NSE universe data $(date -u +%F)"
+          git push

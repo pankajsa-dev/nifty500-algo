@@ -120,15 +120,25 @@ def yahoo_daily(ticker: str, start: date, end: date) -> pd.DataFrame:
 
 
 def download_all(start: date = date(2010, 1, 1), end: date | None = None, source: str = "upstox",
-                 refresh: bool = False, sleep: float = 0.15) -> dict[str, pd.DataFrame]:
-    """Fetch every Nifty 500 stock plus the Nifty 500 index into data/prices/<source>/."""
+                 refresh: bool = False, sleep: float = 0.15, out_dir: Path | None = None) -> dict[str, pd.DataFrame]:
+    """Fetch every Nifty 500 stock plus the Nifty 500 index into data/prices/<source>/.
+
+    source="upstox_all" fetches every NSE equity (EQ and BE series) instead, so that
+    stocks which later dropped out of the Nifty 500 are included.
+    """
     end = end or date.today()
-    out_dir = DATA_DIR / "prices" / source
+    out_dir = out_dir or DATA_DIR / "prices" / source
     out_dir.mkdir(parents=True, exist_ok=True)
     n500 = nifty500_list()
     symbols = n500["Symbol"].str.strip().tolist()
     targets: dict[str, str] = {}
-    if source == "upstox":
+    if source == "upstox_all":
+        ins = upstox_instruments()
+        eq = ins[(ins["segment"] == "NSE_EQ") & ins["instrument_type"].isin(["EQ", "BE"])]
+        targets = dict(zip(eq["trading_symbol"], eq["instrument_key"]))
+        targets["_INDEX"] = UPSTOX_INDEX_KEY
+        fetch = upstox_daily
+    elif source == "upstox":
         ins = upstox_instruments()
         eq = ins[(ins["segment"] == "NSE_EQ") & (ins.get("instrument_type", "EQ") == "EQ")]
         by_isin = dict(zip(eq["isin"], eq["instrument_key"]))
@@ -147,7 +157,7 @@ def download_all(start: date = date(2010, 1, 1), end: date | None = None, source
     for n, (sym, key) in enumerate(targets.items(), 1):
         if n % 25 == 0:
             print(f"[{source}] {n}/{len(targets)} done, {len(missing)} failed, {time.time() - started:.0f}s", flush=True)
-        if n == 30 and len(missing) >= 25:
+        if n == 30 and len(missing) >= 25 and not frames:
             print(f"[{source}] almost everything is failing, stopping early: {missing[:3]}", flush=True)
             break
         path = out_dir / f"{sym}.parquet"
@@ -173,11 +183,11 @@ def download_all(start: date = date(2010, 1, 1), end: date | None = None, source
     return frames
 
 
-def load_panel(source: str = "upstox"):
+def load_panel(source: str = "upstox", directory: Path | None = None):
     """Load cached per-symbol files into a MarketData object."""
     from .engine import MarketData
 
-    d = DATA_DIR / "prices" / source
+    d = directory or DATA_DIR / "prices" / source
     frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet")) if not p.stem.startswith("_") or p.stem == "_INDEX"}
     frames = {s: df[~df.index.duplicated(keep="last")].sort_index() for s, df in frames.items()}
     index = frames.pop("_INDEX", None)

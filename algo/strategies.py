@@ -73,8 +73,9 @@ class MomentumRotation(_Base):
     """Hold the top-N strongest stocks, refreshed monthly."""
 
     def __init__(self, top_n: int = 15, keep_rank: int = 30, regime_action: str = "cash",
-                 require_trend: bool = True, **kw):
+                 require_trend: bool = True, max_weight: float | None = 2.0, **kw):
         super().__init__(**kw)
+        self.max_weight = max_weight         # trim a holding back to target once it exceeds this multiple
         self.top_n = top_n
         self.keep_rank = keep_rank
         self.regime_action = regime_action   # "cash": sell all in a downtrend, "hold": just stop buying
@@ -98,13 +99,18 @@ class MomentumRotation(_Base):
         ranked = self.ranked(i, self.require_trend)
         rank_of = {s: r for r, s in enumerate(ranked)}
         orders, keep = [], set()
+        alloc = ctx.equity / self.top_n
         for s in held:
             if rank_of.get(s, 10**9) < self.keep_rank:
                 keep.add(s)
+                pos, c = ctx.positions[s], self.C[i, s]
+                if self.max_weight and not np.isnan(c) and pos.qty * c > self.max_weight * alloc:
+                    qty = int((pos.qty * c - alloc) // c)
+                    if qty > 0:
+                        orders.append(Order(s, "sell", qty=qty, reason="trim"))
             else:
                 orders.append(Order(s, "sell", reason="rank"))
         slots = self.top_n - len(keep)
-        alloc = ctx.equity / self.top_n
         for s in ranked:
             if slots <= 0:
                 break

@@ -51,6 +51,7 @@ class Order:
     sym: int
     side: str                 # "buy" or "sell"
     value: float = 0.0        # ₹ to invest (buys)
+    qty: int = 0              # shares to sell; 0 sells the whole position
     stop: float = np.nan      # initial stop for buys
     reason: str = ""
 
@@ -131,9 +132,17 @@ def run_backtest(data: MarketData, strategy: Strategy, capital: float = 100_000.
                     carry.append(o)   # stock didn't trade today, try again tomorrow
                 continue
             if o.side == "sell":
-                pos = positions.pop(o.sym, None)
+                pos = positions.get(o.sym)
                 if pos is None:
                     continue
+                if 0 < o.qty < pos.qty:
+                    # partial sale: split off the part being sold, keep the rest
+                    part = Position(o.qty, pos.entry_price, pos.entry_i, pos.cost_basis * o.qty / pos.qty)
+                    pos.cost_basis -= part.cost_basis
+                    pos.qty -= o.qty
+                    pos = part
+                else:
+                    positions.pop(o.sym)
                 fill = costs.fill_price(px, "sell")
                 gross = pos.qty * fill
                 ch = costs.charges(gross, "sell")

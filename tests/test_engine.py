@@ -72,3 +72,31 @@ def test_strategies_trade_and_stay_solvent(mkt, make):
     assert s["trades"] > 10
     assert (res.cash >= -1e-6).all()
     assert res.equity.min() > 0
+
+
+class BuyThenTrim(Strategy):
+    name = "trim"
+
+    def on_close(self, ctx):
+        if ctx.i == 0:
+            return [Order(0, "buy", value=50_000)]
+        if ctx.i == 5:
+            return [Order(0, "sell", qty=ctx.positions[0].qty // 2)]
+        return []
+
+
+def test_partial_sell_keeps_rest(mkt):
+    res = run_backtest(mkt, BuyThenTrim(), capital=100_000)
+    t = res.trades
+    assert len(t) == 2                      # the partial sale, plus the open remainder
+    assert t.iloc[0]["exit_reason"] == "" and t.iloc[1]["exit_reason"] == "open"
+    assert t["qty"].sum() == t.iloc[0]["qty"] + t.iloc[1]["qty"]
+    assert abs(t.iloc[0]["qty"] - t.iloc[1]["qty"]) <= 1
+
+
+def test_point_in_time_members_uses_past_only(mkt):
+    from algo.universe import point_in_time_members
+    full = point_in_time_members(mkt.close, mkt.volume, top=20)
+    cut = point_in_time_members(mkt.close.iloc[:1000], mkt.volume.iloc[:1000], top=20)
+    pd.testing.assert_frame_equal(full.iloc[:1000], cut)
+    assert full.iloc[-1].sum() == 20

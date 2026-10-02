@@ -50,7 +50,7 @@ def score(s: dict) -> float:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source", default="upstox")
+    ap.add_argument("--source", default="upstox_all")
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--capital", type=float, default=100_000)
     ap.add_argument("--is-start", default="2012-01-01")
@@ -66,6 +66,9 @@ def main():
     else:
         from algo.data import load_panel
         data = load_panel(a.source)
+        if a.source == "upstox_all":
+            from algo.universe import point_in_time_members
+            data.members = point_in_time_members(data.close, data.volume, top=500)
 
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)

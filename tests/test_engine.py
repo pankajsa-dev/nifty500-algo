@@ -100,3 +100,12 @@ def test_point_in_time_members_uses_past_only(mkt):
     cut = point_in_time_members(mkt.close.iloc[:1000], mkt.volume.iloc[:1000], top=20)
     pd.testing.assert_frame_equal(full.iloc[:1000], cut)
     assert full.iloc[-1].sum() == 20
+
+
+def test_drop_sparse_dates():
+    from algo.data import drop_sparse_dates
+    idx = pd.bdate_range("2020-01-01", periods=60)
+    close = pd.DataFrame(1.0, idx, list("abcdefghij"))
+    close.iloc[30, 1:] = np.nan          # a special session where only one stock printed
+    out = drop_sparse_dates({"close": close})
+    assert len(out["close"]) == 59 and idx[30] not in out["close"].index

@@ -183,6 +183,18 @@ def download_all(start: date = date(2010, 1, 1), end: date | None = None, source
     return frames
 
 
+def drop_sparse_dates(fields: dict[str, pd.DataFrame], min_share: float = 0.8) -> dict[str, pd.DataFrame]:
+    """Remove days on which only a few stocks have a candle (special or mock sessions).
+
+    One such day inside a 200-day window would otherwise blank out every rolling
+    indicator that needs a full window.
+    """
+    n = fields["close"].notna().sum(axis=1)
+    typical = n.rolling(21, center=True, min_periods=1).median()
+    keep = n >= min_share * typical
+    return {f: df.loc[keep] for f, df in fields.items()}
+
+
 def load_panel(source: str = "upstox", directory: Path | None = None):
     """Load cached per-symbol files into a MarketData object."""
     from .engine import MarketData
@@ -191,6 +203,7 @@ def load_panel(source: str = "upstox", directory: Path | None = None):
     frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet")) if not p.stem.startswith("_") or p.stem == "_INDEX"}
     frames = {s: df[~df.index.duplicated(keep="last")].sort_index() for s, df in frames.items()}
     index = frames.pop("_INDEX", None)
-    fields = {f: pd.DataFrame({s: df[f] for s, df in frames.items()}).sort_index()
+    fields = {f: pd.DataFrame({s: df[f] for s, df in frames.items()}).sort_index().astype(float)
               for f in ("open", "high", "low", "close", "volume")}
+    fields = drop_sparse_dates(fields)
     return MarketData(**fields, index_close=None if index is None else index["close"])

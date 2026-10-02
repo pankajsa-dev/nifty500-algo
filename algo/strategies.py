@@ -36,7 +36,7 @@ class _Base(Strategy):
         self.dates = data.dates
         self.C = c.to_numpy(float)
         turnover = (c * data.volume).rolling(20, min_periods=15).median()
-        sma200 = c.rolling(200, min_periods=200).mean()
+        sma200 = c.rolling(200, min_periods=180).mean()
         elig = (turnover >= self.min_turnover) & (c >= self.min_price)
         if data.members is not None:
             elig &= data.members

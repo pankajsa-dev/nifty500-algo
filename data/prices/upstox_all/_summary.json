@@ -1,0 +1,25 @@
+{
+  "source": "upstox_all",
+  "requested": 2926,
+  "downloaded": 2922,
+  "failed": 4,
+  "seconds": 2119,
+  "sample_errors": [
+    [
+      "ORIENTCABL",
+      "no data"
+    ],
+    [
+      "ACEVECTOR",
+      "no data"
+    ],
+    [
+      "GERMAN",
+      "no data"
+    ],
+    [
+      "RUNWALENTR",
+      "no data"
+    ]
+  ]
+}

@@ -203,6 +203,11 @@ def load_panel(source: str = "upstox", directory: Path | None = None):
     frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet")) if not p.stem.startswith("_") or p.stem == "_INDEX"}
     frames = {s: df[~df.index.duplicated(keep="last")].sort_index() for s, df in frames.items()}
     index = frames.pop("_INDEX", None)
+    if source == "upstox_all" and (DATA_DIR / "upstox_nse_instruments.parquet").exists():
+        # keep company shares only (ISIN INE...); drop ETFs, liquid funds (INF...) and partly paid shares
+        ins = upstox_instruments()
+        isin = dict(zip(ins["trading_symbol"], ins["isin"]))
+        frames = {s: df for s, df in frames.items() if str(isin.get(s, "INE")).startswith("INE")}
     fields = {f: pd.DataFrame({s: df[f] for s, df in frames.items()}).sort_index().astype(float)
               for f in ("open", "high", "low", "close", "volume")}
     fields = drop_sparse_dates(fields)

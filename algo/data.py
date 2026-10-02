@@ -32,19 +32,21 @@ UPSTOX_INDEX_KEY = "NSE_INDEX|Nifty 500"
 YAHOO_INDEX = "^CRSLDX"
 
 
-def _get(url: str, tries: int = 4, **kw) -> requests.Response:
+def _get(url: str, tries: int = 3, headers: dict | None = None, **kw) -> requests.Response:
+    """GET with a short retry on rate limits and network errors; other HTTP errors raise at once."""
     for k in range(tries):
         try:
-            r = requests.get(url, headers={**UA, **kw.pop("headers", {})}, timeout=30, **kw)
-            if r.status_code == 429:
-                time.sleep(2 ** k)
-                continue
-            r.raise_for_status()
-            return r
+            r = requests.get(url, headers={**UA, **(headers or {})}, timeout=20, **kw)
         except requests.RequestException:
             if k == tries - 1:
                 raise
             time.sleep(2 ** k)
+            continue
+        if r.status_code == 429 and k < tries - 1:
+            time.sleep(2 ** (k + 1))
+            continue
+        r.raise_for_status()
+        return r
     raise RuntimeError(f"failed: {url}")
 
 
@@ -140,7 +142,13 @@ def download_all(start: date = date(2010, 1, 1), end: date | None = None, source
         fetch = yahoo_daily
 
     missing, frames = [], {}
-    for sym, key in targets.items():
+    started = time.time()
+    for n, (sym, key) in enumerate(targets.items(), 1):
+        if n % 25 == 0:
+            print(f"[{source}] {n}/{len(targets)} done, {len(missing)} failed, {time.time() - started:.0f}s", flush=True)
+        if n == 30 and len(missing) >= 25:
+            print(f"[{source}] almost everything is failing, stopping early: {missing[:3]}", flush=True)
+            break
         path = out_dir / f"{sym}.parquet"
         if path.exists() and not refresh:
             frames[sym] = pd.read_parquet(path)
@@ -156,8 +164,11 @@ def download_all(start: date = date(2010, 1, 1), end: date | None = None, source
         df.to_parquet(path)
         frames[sym] = df
         time.sleep(sleep)
-    if missing:
-        pd.DataFrame(missing, columns=["symbol", "error"]).to_csv(out_dir / "_missing.csv", index=False)
+    pd.DataFrame(missing, columns=["symbol", "error"]).to_csv(out_dir / "_missing.csv", index=False)
+    summary = {"source": source, "requested": len(targets), "downloaded": len(frames),
+               "failed": len(missing), "seconds": round(time.time() - started), "sample_errors": missing[:5]}
+    (out_dir / "_summary.json").write_text(json.dumps(summary, indent=2, default=str))
+    print(summary, flush=True)
     return frames
 
 
@@ -166,7 +177,7 @@ def load_panel(source: str = "upstox"):
     from .engine import MarketData
 
     d = DATA_DIR / "prices" / source
-    frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet"))}
+    frames = {p.stem: pd.read_parquet(p) for p in sorted(d.glob("*.parquet")) if not p.stem.startswith("_") or p.stem == "_INDEX"}
     index = frames.pop("_INDEX", None)
     fields = {f: pd.DataFrame({s: df[f] for s, df in frames.items()}).sort_index()
               for f in ("open", "high", "low", "close", "volume")}

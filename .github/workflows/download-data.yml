@@ -9,18 +9,34 @@ permissions:
 jobs:
   download:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - name: Download Nifty 500 daily candles (Yahoo, then Upstox if reachable)
+      - name: Check which data sources answer
         run: |
-          python -c "from algo.data import download_all; download_all(source='yahoo')"
-          python -c "from algo.data import download_all; download_all(source='upstox')" || echo "upstox download failed, continuing"
+          mkdir -p data
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          for u in \
+            "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv" \
+            "https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz" \
+            "https://api.upstox.com/v3/historical-candle/NSE_EQ%7CINE002A01018/days/1/2024-12-31/2024-01-01" \
+            "https://query1.finance.yahoo.com/v8/finance/chart/RELIANCE.NS?range=1mo&interval=1d"; do
+            echo "$(curl -s -m 20 -A "$UA" -o /dev/null -w '%{http_code}' "$u") $u"
+          done | tee data/_probe.txt
+      - name: Download from Upstox
+        timeout-minutes: 60
+        continue-on-error: true
+        run: python -c "from algo.data import download_all; download_all(source='upstox')" 2>&1 | tee data/_log_upstox.txt
+      - name: Download from Yahoo
+        timeout-minutes: 75
+        continue-on-error: true
+        run: python -c "from algo.data import download_all; download_all(source='yahoo', sleep=0.3)" 2>&1 | tee data/_log_yahoo.txt
       - name: Commit data
+        if: always()
         run: |
           git config user.name "data-bot"
           git config user.email "data-bot@users.noreply.github.com"

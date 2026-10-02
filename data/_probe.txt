@@ -1,0 +1,4 @@
+200 https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv
+200 https://assets.upstox.com/market-quote/instruments/exchange/NSE.json.gz
+200 https://api.upstox.com/v3/historical-candle/NSE_EQ%7CINE002A01018/days/1/2024-12-31/2024-01-01
+429 https://query1.finance.yahoo.com/v8/finance/chart/RELIANCE.NS?range=1mo&interval=1d

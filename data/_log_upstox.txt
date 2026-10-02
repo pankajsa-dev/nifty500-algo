@@ -1,0 +1,20 @@
+[upstox] 25/495 done, 0 failed, 27s
+[upstox] 50/495 done, 0 failed, 54s
+[upstox] 75/495 done, 0 failed, 81s
+[upstox] 100/495 done, 0 failed, 105s
+[upstox] 125/495 done, 0 failed, 135s
+[upstox] 150/495 done, 0 failed, 162s
+[upstox] 175/495 done, 0 failed, 191s
+[upstox] 200/495 done, 0 failed, 221s
+[upstox] 225/495 done, 0 failed, 254s
+[upstox] 250/495 done, 0 failed, 283s
+[upstox] 275/495 done, 0 failed, 310s
+[upstox] 300/495 done, 0 failed, 337s
+[upstox] 325/495 done, 0 failed, 360s
+[upstox] 350/495 done, 0 failed, 385s
+[upstox] 375/495 done, 0 failed, 409s
+[upstox] 400/495 done, 0 failed, 436s
+[upstox] 425/495 done, 0 failed, 467s
+[upstox] 450/495 done, 0 failed, 497s
+[upstox] 475/495 done, 0 failed, 526s
+{'source': 'upstox', 'requested': 495, 'downloaded': 495, 'failed': 0, 'seconds': 552, 'sample_errors': []}

@@ -1,0 +1,29 @@
+name: Download market data
+
+on:
+  workflow_dispatch:   # run by hand for now; a daily schedule comes with incremental updates
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Download Nifty 500 daily candles (Yahoo, then Upstox if reachable)
+        run: |
+          python -c "from algo.data import download_all; download_all(source='yahoo')"
+          python -c "from algo.data import download_all; download_all(source='upstox')" || echo "upstox download failed, continuing"
+      - name: Commit data
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "Update market data $(date -u +%F)"
+          git push

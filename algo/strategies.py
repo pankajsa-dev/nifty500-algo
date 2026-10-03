@@ -76,11 +76,13 @@ class MomentumRotation(_Base):
 
     def __init__(self, top_n: int = 15, keep_rank: int = 30, regime_action: str = "cash",
                  require_trend: bool = True, max_weight: float | None = 2.0,
-                 max_extension: float | None = None, max_ret_1m: float | None = None, **kw):
+                 max_extension: float | None = None, max_ret_1m: float | None = None,
+                 skip_top: int = 0, **kw):
         super().__init__(**kw)
         self.max_weight = max_weight         # trim a holding back to target once it exceeds this multiple
         self.max_extension = max_extension   # skip new buys priced above this multiple of their 200-day average
         self.max_ret_1m = max_ret_1m         # skip new buys that rose more than this in the last month
+        self.skip_top = skip_top             # never buy the N highest-ranked stocks; buy the next ones
         self.top_n = top_n
         self.keep_rank = keep_rank
         self.regime_action = regime_action   # "cash": sell all in a downtrend, "hold": just stop buying
@@ -106,7 +108,7 @@ class MomentumRotation(_Base):
         orders, keep = [], set()
         alloc = ctx.equity / self.top_n
         for s in held:
-            if rank_of.get(s, 10**9) < self.keep_rank:
+            if rank_of.get(s, 10**9) < self.keep_rank + self.skip_top:
                 keep.add(s)
                 pos, c = ctx.positions[s], self.C[i, s]
                 if self.max_weight and not np.isnan(c) and pos.qty * c > self.max_weight * alloc:
@@ -116,7 +118,7 @@ class MomentumRotation(_Base):
             else:
                 orders.append(Order(s, "sell", reason="rank"))
         slots = self.top_n - len(keep)
-        for s in ranked:
+        for s in ranked[self.skip_top:]:
             if slots <= 0:
                 break
             if s in held:

@@ -1,0 +1,51 @@
+name: Momentum picks
+
+on:
+  workflow_dispatch:
+    inputs:
+      capital:
+        description: "Money to invest in ₹ (used when you have no holdings yet)"
+        default: "100000"
+      holdings:
+        description: 'Your current holdings, e.g. CUPID:115,HFCL:75 (leave empty if none)'
+        default: ""
+      cash:
+        description: "Cash available in ₹ (only used with holdings)"
+        default: ""
+  schedule:
+    - cron: "0 13 * * 1-5"   # 18:30 IST on weekdays, after the close
+
+permissions:
+  contents: write
+
+jobs:
+  picks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Update prices
+        run: python -c "from algo.data import update_prices; update_prices()"
+      - name: Work out picks
+        env:
+          CAPITAL: ${{ inputs.capital || '100000' }}
+          HOLDINGS: ${{ inputs.holdings }}
+          CASH: ${{ inputs.cash }}
+        run: |
+          ARGS=(--capital "$CAPITAL" --out picks/latest.md)
+          [ -n "$HOLDINGS" ] && ARGS+=(--holdings "$HOLDINGS")
+          [ -n "$CASH" ] && ARGS+=(--cash "$CASH")
+          python scripts/picks.py "${ARGS[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+          cp picks/latest.md "picks/$(date -u +%F).md"
+      - name: Save prices and picks
+        run: |
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git add data picks
+          git diff --cached --quiet && exit 0
+          git commit -m "Update prices and picks $(date -u +%F)"
+          for k in 1 2 3; do git pull --rebase -q origin main && git push && break; sleep 5; done

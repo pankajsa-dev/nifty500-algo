@@ -20,3 +20,11 @@ python run_backtests.py --synthetic          # pipeline check on random data
 python -c "from algo.data import download_all; download_all()"   # needs network access
 python run_backtests.py
 ```
+
+## Get this month's stock list
+On GitHub: **Actions → Momentum picks → Run workflow**. Optionally enter your current
+holdings (e.g. `CUPID:115,HFCL:75`) and cash. When it finishes, the list is shown on the
+run's summary page and saved to `picks/latest.md`. It also runs automatically every
+weekday evening to keep prices fresh.
+
+Locally: `python scripts/picks.py --capital 100000` (add `--holdings "SYM:qty,..."`).

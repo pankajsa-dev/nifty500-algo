@@ -59,7 +59,7 @@ class _Base(Strategy):
             share = (elig & (c > sma200)).sum(axis=1) / elig.sum(axis=1).replace(0, np.nan)
             self.regime = (share > 0.5).to_numpy(bool)
         if not self.regime_filter:
-            self.regime[:] = True
+            self.regime = np.ones(len(c), bool)
 
     def ranked(self, i: int, require_trend: bool = True) -> np.ndarray:
         ok = self.eligible[i] & ~np.isnan(self.score[i])

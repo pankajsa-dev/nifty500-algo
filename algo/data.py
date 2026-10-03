@@ -195,6 +195,52 @@ def drop_sparse_dates(fields: dict[str, pd.DataFrame], min_share: float = 0.8) -
     return {f: df.loc[keep] for f, df in fields.items()}
 
 
+def update_prices(source: str = "upstox", lookback_days: int = 10, sleep: float = 0.1) -> dict:
+    """Bring cached Nifty 500 prices up to date and add new index members.
+
+    Fetches only the last few days for each stock. If the overlapping days don't
+    match the cached prices (a split or bonus was adjusted since), the stock's full
+    history is downloaded again.
+    """
+    nifty500_list(refresh=True)
+    upstox_instruments(refresh=True)
+    out_dir = DATA_DIR / "prices" / source
+    n500 = nifty500_list()
+    ins = upstox_instruments()
+    eq = ins[ins["segment"] == "NSE_EQ"]
+    by_isin = dict(zip(eq["isin"], eq["instrument_key"]))
+    targets = {sym: by_isin[isin] for sym, isin in zip(n500["Symbol"].str.strip(), n500["ISIN Code"].str.strip())
+               if isin in by_isin}
+    targets["_INDEX"] = UPSTOX_INDEX_KEY
+    today = date.today()
+    stats = {"updated": 0, "refetched": 0, "new": 0, "failed": []}
+    for sym, key in targets.items():
+        path = out_dir / f"{sym}.parquet"
+        try:
+            if not path.exists():
+                df = upstox_daily(key, date(2010, 1, 1), today)
+                stats["new"] += 1
+            else:
+                old = pd.read_parquet(path)
+                old = old[~old.index.duplicated(keep="last")]
+                recent = upstox_daily(key, (old.index[-1] - timedelta(days=lookback_days)).date(), today)
+                overlap = old.index.intersection(recent.index)
+                if len(overlap) and (abs(recent.loc[overlap, "close"] / old.loc[overlap, "close"] - 1) > 0.01).any():
+                    df = upstox_daily(key, date(2010, 1, 1), today)   # history was re-adjusted
+                    stats["refetched"] += 1
+                else:
+                    df = pd.concat([old, recent])
+                    df = df[~df.index.duplicated(keep="last")].sort_index()
+                    stats["updated"] += 1
+            if not df.empty:
+                df.astype(float).to_parquet(path)
+        except Exception as e:
+            stats["failed"].append((sym, str(e)[:100]))
+        time.sleep(sleep)
+    print({k: (v if k != "failed" else v[:5]) for k, v in stats.items()}, f"failed={len(stats['failed'])}", flush=True)
+    return stats
+
+
 def load_panel(source: str = "upstox", directory: Path | None = None):
     """Load cached per-symbol files into a MarketData object."""
     from .engine import MarketData

@@ -42,6 +42,8 @@ class _Base(Strategy):
             elig &= data.members
         self.eligible = elig.to_numpy(bool)
         self.above200 = (c > sma200).to_numpy(bool)
+        self.extension = (c / sma200).to_numpy(float)                  # how far above the 200-day average
+        self.ret_1m = (c / c.shift(21) - 1).to_numpy(float)
 
         ret = c.shift(self.mom_skip) / c.shift(self.mom_lookback) - 1
         if self.vol_adjust:
@@ -73,9 +75,12 @@ class MomentumRotation(_Base):
     """Hold the top-N strongest stocks, refreshed monthly."""
 
     def __init__(self, top_n: int = 15, keep_rank: int = 30, regime_action: str = "cash",
-                 require_trend: bool = True, max_weight: float | None = 2.0, **kw):
+                 require_trend: bool = True, max_weight: float | None = 2.0,
+                 max_extension: float | None = None, max_ret_1m: float | None = None, **kw):
         super().__init__(**kw)
         self.max_weight = max_weight         # trim a holding back to target once it exceeds this multiple
+        self.max_extension = max_extension   # skip new buys priced above this multiple of their 200-day average
+        self.max_ret_1m = max_ret_1m         # skip new buys that rose more than this in the last month
         self.top_n = top_n
         self.keep_rank = keep_rank
         self.regime_action = regime_action   # "cash": sell all in a downtrend, "hold": just stop buying
@@ -115,6 +120,10 @@ class MomentumRotation(_Base):
             if slots <= 0:
                 break
             if s in held:
+                continue
+            if self.max_extension and self.extension[i, s] > self.max_extension:
+                continue
+            if self.max_ret_1m and self.ret_1m[i, s] > self.max_ret_1m:
                 continue
             orders.append(Order(s, "buy", value=alloc, reason="rank"))
             slots -= 1

@@ -1,6 +1,6 @@
-# Momentum picks — prices as of 2026-10-14
+# Momentum picks — prices as of 2026-10-15
 
-Market filter: Nifty 500 at 22,038 vs 200-day average 22,889 → **OFF, don't buy new stocks; keep what you hold**
+Market filter: Nifty 500 at 22,181 vs 200-day average 22,880 → **OFF, don't buy new stocks; keep what you hold**
 
 Portfolio size used: ₹100,000 → about ₹10,000 per stock.
 
@@ -8,18 +8,18 @@ Portfolio size used: ₹100,000 → about ₹10,000 per stock.
 
 | Rank | Stock | Last close (₹) | Shares for ₹10,000 | 6-month return |
 |---|---|---|---|---|
-| 1 | STLTECH | 924.65 | 10 | +270% |
-| 2 | CUPID | 354.60 | 28 | +203% |
-| 3 | WELCORP | 2,633.80 | 3 | +166% |
-| 4 | MTARTECH | 7,672.00 | 1 | +66% |
-| 5 | LAURUSLABS | 2,036.90 | 4 | +81% |
-| 6 | SANSERA | 4,198.80 | 2 | +76% |
-| 7 | HFCL | 256.65 | 38 | +172% |
-| 8 | CPPLUS | 4,440.30 | 2 | +96% |
-| 9 | ATHERENERG | 1,467.00 | 6 | +82% |
-| 10 | ACUTAAS | 3,160.50 | 3 | +41% |
+| 1 | STLTECH | 878.45 | 11 | +234% |
+| 2 | CUPID | 352.50 | 28 | +204% |
+| 3 | LAURUSLABS | 2,018.50 | 4 | +72% |
+| 4 | MTARTECH | 7,288.50 | 1 | +41% |
+| 5 | WELCORP | 2,486.90 | 4 | +129% |
+| 6 | SANSERA | 4,054.50 | 2 | +65% |
+| 7 | HFCL | 243.82 | 41 | +152% |
+| 8 | CPPLUS | 4,109.10 | 2 | +77% |
+| 9 | SONACOMS | 801.00 | 12 | +35% |
+| 10 | ATHERENERG | 1,470.00 | 6 | +80% |
 
-Ranks 11–30 (keep these if you already hold them): KIRLOSENG, AETHER, SONACOMS, TDPOWERSYS, FEDERALBNK, THANGAMAYL, MCX, SAILIFE, ANANDRATHI, NAVINFLUOR, RRKABEL, APARINDS, DIVISLAB, GRANULES, INOXINDIA, AUROPHARMA, BHEL, CRAFTSMAN, SYRMA, TITAN
+Ranks 11–30 (keep these if you already hold them): ACUTAAS, KIRLOSENG, AETHER, FEDERALBNK, TDPOWERSYS, SAILIFE, MCX, RRKABEL, THANGAMAYL, ANANDRATHI, AUROPHARMA, DIVISLAB, NAVINFLUOR, GRANULES, APARINDS, BHEL, HONASA, CRAFTSMAN, AJANTPHARM, SYRMA
 
 ## What to do
 
